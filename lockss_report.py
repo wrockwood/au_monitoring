@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download LOCKSS AU status through SSH and convert epoch milliseconds to UTC."""
+"""Download LOCKSS AU status through an SSH tunnel and format ISO 8601 datetimes."""
 
 import argparse
 from contextlib import contextmanager
@@ -161,7 +161,7 @@ def convert_csv(source, destination) -> tuple[int, int]:
             if not re.fullmatch(r"[0-9]{13}", value):
                 raise ReportError(f"Expected epoch milliseconds in row {row_number}, {headers[index]}.")
             instant = EPOCH + timedelta(milliseconds=int(value))
-            row[index] = instant.isoformat(sep=" ", timespec="milliseconds")[:-6]
+            row[index] = instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
             converted += 1
         writer.writerow(row)
         rows += 1
@@ -182,7 +182,7 @@ def create_report(output_dir: Path, *, source: Path | None = None,
             raw.chmod(0o600)
         else:
             download_report(base_url, credentials, raw, timeout)
-        result = staging / "status-UTC.csv"
+        result = staging / "status.csv"
         with raw.open(encoding="utf-8-sig", newline="") as original, result.open(
             "w", encoding="utf-8", newline=""
         ) as converted:
@@ -229,7 +229,7 @@ def main() -> int:
             with ssh_tunnel(args.host, args.remote_port, key_path) as base_url:
                 result, rows, count = create_report(args.output_dir, base_url=base_url,
                                                   credentials=credentials, timeout=args.timeout)
-        print(f"Saved {rows} archival units; converted {count} timestamps to UTC.")
+        print(f"Saved {rows} archival units; formatted {count} timestamps as ISO 8601 datetimes.")
         print(result)
         return 0
     except HTTPError as error:

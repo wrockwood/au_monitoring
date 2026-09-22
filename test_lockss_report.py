@@ -111,7 +111,7 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report.convert_csv(io.StringIO(raw_csv()), output), (1, 1))
         rows = list(csv.reader(io.StringIO(output.getvalue())))
         expected = ROW.copy()
-        expected[2] = "2026-09-09 17:23:54.653"
+        expected[2] = "2026-09-09T17:23:54.653Z"
         self.assertEqual(rows, [HEADERS, expected])
 
     def test_invalid_csv_rejected(self):
@@ -129,7 +129,8 @@ class ReportTests(unittest.TestCase):
                 output, base_url=base, credentials=("example-user", "p&=+# word"))
             self.assertEqual((rows, count), (1, 1))
             self.assertEqual((result.parent / "raw.csv").read_bytes(), raw_csv().encode())
-            self.assertIn("2026-09-09 17:23:54.653", result.read_text())
+            self.assertEqual(result.name, "status.csv")
+            self.assertIn("2026-09-09T17:23:54.653Z", result.read_text())
             self.assertEqual(result.stat().st_mode & 0o777, 0o600)
             self.assertEqual(result.parent.stat().st_mode & 0o777, 0o700)
 

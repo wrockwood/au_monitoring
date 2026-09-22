@@ -61,7 +61,7 @@ class ConfigTests(unittest.TestCase):
         self.write_env("LOCKSS_SSH_HOST=root@node.example.org\nLOCKSS_UI_USERNAME=example-user\n"
                        "LOCKSS_UI_PASSWORD=example-password\nLOCKSS_REMOTE_PORT=24621\n"
                        "LOCKSS_HTTP_TIMEOUT=120\nLOCKSS_SSH_KEY_PATH=keys/example key\n")
-        result = self.root / "status-UTC.csv"
+        result = self.root / "status.csv"
         @contextmanager
         def tunnel(host, port, key_path):
             self.assertEqual((host, port), ("root@override.example.org", 25000))

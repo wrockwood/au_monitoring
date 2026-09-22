@@ -1,7 +1,7 @@
 # LOCKSS AU monitoring
 
 Download archival-unit status from the LOCKSS configuration service through an
-SSH tunnel and convert its timestamps to readable UTC dates.
+SSH tunnel and format its timestamps as ISO 8601 datetimes.
 
 Requires **Python 3.10+ and OpenSSH** on macOS or Linux. Tested with LOCKSS 2.0
 beta2 on macOS.
@@ -61,15 +61,16 @@ output path and saves a new dated folder:
 ```text
 reports/20260922T120000.123456Z/
   raw.csv
-  status-UTC.csv
+  status.csv
 ```
 
-`raw.csv` is the original download. `status-UTC.csv` converts **Last Poll**,
-**Last Crawl Start**, and **Last Successful Crawl** to UTC dates such as
-`2026-09-09 17:23:54.653`. Other values, column order, blanks, and `-1` are preserved.
-Previous reports are kept.
+`raw.csv` is the original download. `status.csv` formats **Last Poll**,
+**Last Crawl Start**, and **Last Successful Crawl** as ISO 8601 datetimes such as
+`2026-09-09T17:23:54.653Z`. The source values are Unix epoch milliseconds;
+`Z` identifies UTC. The computer's local time zone does not affect the output.
+Other values, column order, blanks, and `-1` are preserved. Previous reports are kept.
 
-Share `status-UTC.csv` or import it into your organization's spreadsheet tab.
+Share `status.csv` or import it into your organization's spreadsheet tab.
 For a fresh snapshot, replace that tab's contents, including any leftover rows
 from the previous report.
 
