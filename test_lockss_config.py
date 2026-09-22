@@ -60,21 +60,30 @@ class ConfigTests(unittest.TestCase):
     def test_report_cli_uses_env_and_cli_overrides(self):
         self.write_env("LOCKSS_SSH_HOST=root@node.example.org\nLOCKSS_UI_USERNAME=example-user\n"
                        "LOCKSS_UI_PASSWORD=example-password\nLOCKSS_REMOTE_PORT=24621\n"
-                       "LOCKSS_HTTP_TIMEOUT=120\n")
+                       "LOCKSS_HTTP_TIMEOUT=120\nLOCKSS_SSH_KEY_PATH=keys/example key\n")
         result = self.root / "status-UTC.csv"
         @contextmanager
-        def tunnel(host, port):
+        def tunnel(host, port, key_path):
             self.assertEqual((host, port), ("root@override.example.org", 25000))
+            self.assertEqual(key_path, expected_key)
             yield "http://127.0.0.1:1234"
         argv = ["report", "--env-file", str(self.env), "--host", "root@override.example.org",
                 "--remote-port", "25000", "--timeout", "30"]
-        with patch.dict("os.environ", {}, clear=True), patch("sys.argv", argv), \
-             patch.object(report, "ssh_tunnel", tunnel), \
-             patch.object(report, "create_report", return_value=(result, 1, 3)) as create, \
-             redirect_stdout(io.StringIO()):
-            self.assertEqual(report.main(), 0)
-            self.assertEqual(create.call_args.kwargs["credentials"], ("example-user", "example-password"))
-            self.assertEqual(create.call_args.kwargs["timeout"], 30)
+        cases = [
+            ({}, [], config.ROOT / "keys/example key"),
+            ({"LOCKSS_SSH_KEY_PATH": "~/.ssh/example"}, [], Path.home() / ".ssh/example"),
+            ({"LOCKSS_SSH_KEY_PATH": ""}, [], None),
+            ({}, ["--ssh-key", "cli key"], Path("cli key")),
+        ]
+        for environment, extra_args, expected_key in cases:
+            with self.subTest(extra_args=extra_args, environment=environment), \
+                 patch.dict("os.environ", environment, clear=True), patch("sys.argv", argv + extra_args), \
+                 patch.object(report, "ssh_tunnel", tunnel), \
+                 patch.object(report, "create_report", return_value=(result, 1, 3)) as create, \
+                 redirect_stdout(io.StringIO()):
+                self.assertEqual(report.main(), 0)
+                self.assertEqual(create.call_args.kwargs["credentials"], ("example-user", "example-password"))
+                self.assertEqual(create.call_args.kwargs["timeout"], 30)
 
     def test_relative_paths_are_based_on_project_not_working_directory(self):
         with patch.object(config, "ROOT", self.root):

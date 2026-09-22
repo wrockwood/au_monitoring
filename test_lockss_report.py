@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs
 
 import lockss_report as report
@@ -67,6 +68,44 @@ def server(mode="success"):
 
 
 class ReportTests(unittest.TestCase):
+    def test_tunnel_passes_selected_key_as_one_argument_and_cleans_up(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            key = Path(temporary) / "example key"
+            key.write_text("synthetic test placeholder, not a key")
+            for selected in (None, key):
+                process = MagicMock()
+                process.poll.return_value = None
+
+                def start(command, **kwargs):
+                    Path(command[command.index("-S") + 1]).touch()
+                    return process
+
+                with self.subTest(selected=selected), \
+                     patch.object(report.subprocess, "Popen", side_effect=start) as popen, \
+                     patch.object(report.subprocess, "run", return_value=MagicMock(returncode=0)):
+                    with report.ssh_tunnel("user@node.example.org", 24621, selected):
+                        command = popen.call_args.args[0]
+                        if selected is None:
+                            self.assertNotIn("-i", command)
+                            self.assertNotIn("IdentitiesOnly=yes", command)
+                        else:
+                            self.assertEqual(command[command.index("-i") + 1], str(key))
+                            self.assertIn("IdentitiesOnly=yes", command)
+                        self.assertEqual(command[-1], "user@node.example.org")
+                        self.assertIn("BatchMode=yes", command)
+                        self.assertIn("StrictHostKeyChecking=yes", command)
+                    process.terminate.assert_called_once()
+                    process.wait.assert_called_once_with(timeout=5)
+
+    def test_invalid_key_path_fails_before_starting_ssh(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+             patch.object(report.subprocess, "Popen") as popen:
+            for key in (Path(temporary), Path(temporary) / "missing"):
+                with self.subTest(key=key), self.assertRaises(report.ReportError):
+                    with report.ssh_tunnel("user@node.example.org", 24621, key):
+                        self.fail("Invalid key accepted")
+            popen.assert_not_called()
+
     def test_conversion_preserves_non_dates_and_sentinels(self):
         output = io.StringIO(newline="")
         self.assertEqual(report.convert_csv(io.StringIO(raw_csv()), output), (1, 1))

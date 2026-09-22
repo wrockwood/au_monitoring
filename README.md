@@ -26,7 +26,8 @@ chmod 600 .env
 Edit `.env` with your own organization's settings:
 
 ```dotenv
-LOCKSS_SSH_HOST=root@lockss.example.org
+LOCKSS_SSH_HOST=user@lockss.example.org
+LOCKSS_SSH_KEY_PATH=
 LOCKSS_UI_USERNAME=example-user
 LOCKSS_UI_PASSWORD='your-config-service-password'
 LOCKSS_REMOTE_PORT=24621
@@ -40,13 +41,22 @@ web-interface login, separate from SSH credentials. `LOCKSS_SSH_HOST` is
 ordinary SSH works using your local key or agent and a verified host key:
 
 ```sh
-ssh root@lockss.example.org
+ssh user@lockss.example.org
 ```
 
 Replace the example hostname and user with the account your organization uses.
 The tool needs only SSH forwarding and UI read access; it runs no remote shell
 commands and does not install software on the node. It uses your local SSH key
 or agent and never copies a private key from the server.
+
+To select a particular local private key, set
+`LOCKSS_SSH_KEY_PATH=~/.ssh/id_ed25519` or pass
+`--ssh-key ~/.ssh/id_ed25519`. Leave the setting blank or omit it to use your
+normal SSH configuration and agent. A selected path must be a readable file;
+it is passed to SSH with `-i` and `IdentitiesOnly=yes` to avoid offering unrelated
+agent keys. Keep the key outside this repository with appropriate permissions
+(`chmod 600`). For a passphrase-protected key, load it into your SSH agent with
+`ssh-add ~/.ssh/id_ed25519` first; the script runs SSH noninteractively.
 
 ## Retrieve a report
 
@@ -106,6 +116,7 @@ It is independent of any credentials or settings in a parent directory.
 | Variable | Meaning | Default |
 | --- | --- | --- |
 | `LOCKSS_SSH_HOST` | SSH destination, including user if needed | Required for live retrieval |
+| `LOCKSS_SSH_KEY_PATH` | Local private-key path; `~` expands to your home directory | Blank: SSH config/agent |
 | `LOCKSS_UI_USERNAME` | Config-service web username | Required for live retrieval |
 | `LOCKSS_UI_PASSWORD` | Config-service web password | Required for live retrieval |
 | `LOCKSS_REMOTE_PORT` | Config-service HTTP port on the remote node | `24621` |
@@ -126,7 +137,7 @@ Values are read as data, not shell code. **Do not `source .env`.**
 - Explicit CLI options override process environment variables; environment
   variables override `.env`; `.env` overrides built-in defaults. There are no
   CLI options for entering passwords.
-- Relative configured output paths are relative to the scripts' directory.
+- Relative configured key and output paths are relative to the scripts' directory.
   Explicit CLI paths are relative to your current shell directory.
 
 Examples:
@@ -134,7 +145,7 @@ Examples:
 ```sh
 python3 lockss_report.py --help
 python3 lockss_report.py --env-file .env.organization
-python3 lockss_report.py --host root@lockss.example.org --remote-port 24621 --timeout 180
+python3 lockss_report.py --host user@lockss.example.org --remote-port 24621 --timeout 180
 python3 lockss_report.py --input /path/to/raw.csv --output-dir /path/to/reports
 ```
 

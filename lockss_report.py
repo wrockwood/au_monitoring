@@ -37,10 +37,12 @@ def configured_credentials(settings: dict) -> tuple[str, str]:
 
 
 @contextmanager
-def ssh_tunnel(host: str, remote_port: int):
+def ssh_tunnel(host: str, remote_port: int, key_path: Path | None = None):
     """Own one SSH process and loopback listener, leaving existing tunnels alone."""
     if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.@-]*", host):
         raise ReportError("Use an SSH hostname or user@hostname, without options or spaces.")
+    if key_path is not None and (not key_path.is_file() or not os.access(key_path, os.R_OK)):
+        raise ReportError("The SSH key path must point to a readable local private-key file.")
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
@@ -53,8 +55,10 @@ def ssh_tunnel(host: str, remote_port: int):
             "-o", "StrictHostKeyChecking=yes", "-o", "ExitOnForwardFailure=yes",
             "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=15",
             "-o", "ServerAliveCountMax=2",
-            "-L", f"127.0.0.1:{port}:localhost:{remote_port}", host,
         ]
+        if key_path is not None:
+            command.extend(["-i", str(key_path), "-o", "IdentitiesOnly=yes"])
+        command.extend(["-L", f"127.0.0.1:{port}:localhost:{remote_port}", host])
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL,
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
@@ -196,6 +200,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--env-file", type=Path, help="Private settings file (default: .env beside the script)")
     parser.add_argument("--host", help="Override LOCKSS_SSH_HOST")
+    parser.add_argument("--ssh-key", type=Path, help="Override LOCKSS_SSH_KEY_PATH (local private key)")
     parser.add_argument("--remote-port", type=int, help="Override LOCKSS_REMOTE_PORT (default: 24621)")
     parser.add_argument("--output-dir", type=Path, help="Override LOCKSS_REPORTS_DIR (default: reports)")
     parser.add_argument("--input", type=Path, help="Convert an existing raw CSV without connecting")
@@ -218,7 +223,10 @@ def main() -> int:
             result, rows, count = create_report(args.output_dir, source=args.input)
         else:
             credentials = configured_credentials(settings)
-            with ssh_tunnel(args.host, args.remote_port) as base_url:
+            key_path = args.ssh_key.expanduser() if args.ssh_key is not None else None
+            if key_path is None and settings.get("LOCKSS_SSH_KEY_PATH"):
+                key_path = configured_path(settings, "LOCKSS_SSH_KEY_PATH", "")
+            with ssh_tunnel(args.host, args.remote_port, key_path) as base_url:
                 result, rows, count = create_report(args.output_dir, base_url=base_url,
                                                   credentials=credentials, timeout=args.timeout)
         print(f"Saved {rows} archival units; converted {count} timestamps to UTC.")
