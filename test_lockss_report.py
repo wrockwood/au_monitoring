@@ -83,7 +83,7 @@ class ReportTests(unittest.TestCase):
                 with self.subTest(selected=selected), \
                      patch.object(report.subprocess, "Popen", side_effect=start) as popen, \
                      patch.object(report.subprocess, "run", return_value=MagicMock(returncode=0)):
-                    with report.ssh_tunnel("user@node.example.org", 24621, selected):
+                    with report.ssh_tunnel("user@node.example.org", 24602, selected):
                         command = popen.call_args.args[0]
                         if selected is None:
                             self.assertNotIn("-i", command)
@@ -102,7 +102,7 @@ class ReportTests(unittest.TestCase):
              patch.object(report.subprocess, "Popen") as popen:
             for key in (Path(temporary), Path(temporary) / "missing"):
                 with self.subTest(key=key), self.assertRaises(report.ReportError):
-                    with report.ssh_tunnel("user@node.example.org", 24621, key):
+                    with report.ssh_tunnel("user@node.example.org", 24602, key):
                         self.fail("Invalid key accepted")
             popen.assert_not_called()
 

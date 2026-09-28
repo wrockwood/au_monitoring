@@ -201,7 +201,7 @@ def main() -> int:
     parser.add_argument("--env-file", type=Path, help="Private settings file (default: .env beside the script)")
     parser.add_argument("--host", help="Override LOCKSS_SSH_HOST")
     parser.add_argument("--ssh-key", type=Path, help="Override LOCKSS_SSH_KEY_PATH (local private key)")
-    parser.add_argument("--remote-port", type=int, help="Override LOCKSS_REMOTE_PORT (default: 24621)")
+    parser.add_argument("--remote-port", type=int, help="Override LOCKSS_REMOTE_PORT (default: 24602)")
     parser.add_argument("--output-dir", type=Path, help="Override LOCKSS_REPORTS_DIR (default: reports)")
     parser.add_argument("--input", type=Path, help="Convert an existing raw CSV without connecting")
     parser.add_argument("--timeout", type=float, help="Override LOCKSS_HTTP_TIMEOUT (default: 120 seconds)")
@@ -210,7 +210,7 @@ def main() -> int:
         settings = load_settings(args.env_file)
         args.host = args.host if args.host is not None else settings.get("LOCKSS_SSH_HOST")
         try:
-            args.remote_port = args.remote_port if args.remote_port is not None else int(settings.get("LOCKSS_REMOTE_PORT", "24621"))
+            args.remote_port = args.remote_port if args.remote_port is not None else int(settings.get("LOCKSS_REMOTE_PORT", "24602"))
             args.timeout = args.timeout if args.timeout is not None else float(settings.get("LOCKSS_HTTP_TIMEOUT", "120"))
         except ValueError:
             raise ReportError("LOCKSS_REMOTE_PORT and LOCKSS_HTTP_TIMEOUT must be numeric.") from None

@@ -24,7 +24,7 @@ LOCKSS_SSH_HOST=user@lockss.example.org
 LOCKSS_SSH_KEY_PATH=
 LOCKSS_UI_USERNAME=example-user
 LOCKSS_UI_PASSWORD='your-config-service-password'
-LOCKSS_REMOTE_PORT=24621
+LOCKSS_REMOTE_PORT=24602
 LOCKSS_HTTP_TIMEOUT=120
 LOCKSS_REPORTS_DIR=reports
 ```
@@ -76,8 +76,10 @@ from the previous report.
 
 ## Configuration
 
-`LOCKSS_REMOTE_PORT` defaults to `24621`, `LOCKSS_HTTP_TIMEOUT` to `120` seconds,
-and `LOCKSS_REPORTS_DIR` to `reports`. `.env` is loaded from beside the script;
+`LOCKSS_REMOTE_PORT` defaults to `24602`, the configuration service port in
+LOCKSS 2.0.91-beta2. Update this value in an existing `.env` after upgrading
+your node. `LOCKSS_HTTP_TIMEOUT` defaults to `120` seconds and
+`LOCKSS_REPORTS_DIR` to `reports`. `.env` is loaded from beside the script;
 relative key and output paths in it are resolved from that directory.
 
 Use literal `KEY=value` entries, with single quotes around passwords as shown.
